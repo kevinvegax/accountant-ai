@@ -6,9 +6,26 @@ type DatabaseInfo = {
   serverTime: string
 }
 
+type Client = {
+  id: number
+  name: string
+  email: string
+  status: 'active' | 'inactive'
+  createdAt: string
+}
+
 type DatabaseInfoResponse =
   | { database: DatabaseInfo }
   | { error: string }
+
+type ClientsResponse =
+  | { clients: Client[] }
+  | { error: string }
+
+type DashboardData = {
+  databaseInfo: DatabaseInfo
+  clients: Client[]
+}
 
 async function fetchDatabaseInfo() {
   const response = await fetch('/api/database-info')
@@ -25,6 +42,30 @@ async function fetchDatabaseInfo() {
   throw new Error('La respuesta de Postgres no tiene datos.')
 }
 
+async function fetchClients() {
+  const response = await fetch('/api/clients')
+  const data = (await response.json()) as ClientsResponse
+
+  if (!response.ok) {
+    throw new Error('error' in data ? data.error : 'No se pudieron cargar clientes.')
+  }
+
+  if ('clients' in data) {
+    return data.clients
+  }
+
+  throw new Error('La respuesta de clientes no tiene datos.')
+}
+
+async function fetchDashboardData(): Promise<DashboardData> {
+  const [databaseInfo, clients] = await Promise.all([
+    fetchDatabaseInfo(),
+    fetchClients(),
+  ])
+
+  return { databaseInfo, clients }
+}
+
 function getLoadErrorMessage(loadError: unknown) {
   return loadError instanceof Error
     ? loadError.message
@@ -33,17 +74,22 @@ function getLoadErrorMessage(loadError: unknown) {
 
 function App() {
   const [databaseInfo, setDatabaseInfo] = useState<DatabaseInfo | null>(null)
+  const [clients, setClients] = useState<Client[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const loadDatabaseInfo = useCallback(async () => {
+  const loadDashboardData = useCallback(async () => {
     setIsLoading(true)
     setError(null)
 
     try {
-      setDatabaseInfo(await fetchDatabaseInfo())
+      const nextData = await fetchDashboardData()
+
+      setDatabaseInfo(nextData.databaseInfo)
+      setClients(nextData.clients)
     } catch (loadError) {
       setDatabaseInfo(null)
+      setClients([])
       setError(getLoadErrorMessage(loadError))
     } finally {
       setIsLoading(false)
@@ -53,16 +99,18 @@ function App() {
   useEffect(() => {
     let shouldIgnore = false
 
-    async function loadInitialDatabaseInfo() {
+    async function loadInitialDashboardData() {
       try {
-        const nextDatabaseInfo = await fetchDatabaseInfo()
+        const nextData = await fetchDashboardData()
 
         if (!shouldIgnore) {
-          setDatabaseInfo(nextDatabaseInfo)
+          setDatabaseInfo(nextData.databaseInfo)
+          setClients(nextData.clients)
         }
       } catch (loadError) {
         if (!shouldIgnore) {
           setDatabaseInfo(null)
+          setClients([])
           setError(getLoadErrorMessage(loadError))
         }
       } finally {
@@ -72,7 +120,7 @@ function App() {
       }
     }
 
-    void loadInitialDatabaseInfo()
+    void loadInitialDashboardData()
 
     return () => {
       shouldIgnore = true
@@ -92,9 +140,9 @@ function App() {
         <div className="panel-header">
           <div>
             <p className="eyebrow">Vercel API + Postgres</p>
-            <h1>Datos desde Postgres</h1>
+            <h1>Clientes</h1>
           </div>
-          <button type="button" onClick={loadDatabaseInfo} disabled={isLoading}>
+          <button type="button" onClick={loadDashboardData} disabled={isLoading}>
             {isLoading ? 'Cargando' : 'Actualizar'}
           </button>
         </div>
@@ -113,14 +161,44 @@ function App() {
             <span>Hora del servidor</span>
             <strong>{formattedServerTime}</strong>
           </div>
+          <div>
+            <span>Registros</span>
+            <strong>{clients.length}</strong>
+          </div>
         </div>
 
-        {isLoading && <p className="message">Consultando el endpoint...</p>}
+        {isLoading && <p className="message">Consultando el backend...</p>}
         {error && <p className="message error-message">{error}</p>}
 
+        <section className="clients-section">
+          <div className="section-header">
+            <h2>Lista de clientes</h2>
+            <span>{clients.length} resultados</span>
+          </div>
+
+          {clients.length > 0 ? (
+            <ul className="client-list">
+              {clients.map((client) => (
+                <li key={client.id}>
+                  <div>
+                    <strong>{client.name}</strong>
+                    <span>{client.email}</span>
+                  </div>
+                  <span className={`client-status ${client.status}`}>
+                    {client.status === 'active' ? 'Activo' : 'Inactivo'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            !isLoading && !error && <p className="message">Sin clientes.</p>
+          )}
+        </section>
+
         <div className="endpoint">
-          <span>Endpoint</span>
+          <span>Endpoints</span>
           <code>GET /api/database-info</code>
+          <code>GET /api/clients</code>
         </div>
       </section>
     </main>

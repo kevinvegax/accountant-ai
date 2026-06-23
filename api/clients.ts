@@ -1,9 +1,12 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { getPool } from '../server/db'
 
-type DatabaseInfoRow = {
-  database_name: string
-  server_time: Date | string
+type ClientRow = {
+  id: number
+  name: string
+  email: string
+  status: 'active' | 'inactive'
+  created_at: Date | string
 }
 
 const jsonHeaders = {
@@ -29,24 +32,28 @@ export default async function handler(
   }
 
   try {
-    const result = await getPool().query<DatabaseInfoRow>(`
-      select
-        current_database() as database_name,
-        now() as server_time
+    const result = await getPool().query<ClientRow>(`
+      select id, name, email, status, created_at
+      from clients
+      order by id asc
+      limit 20
     `)
-    const row = result.rows[0]
-    const serverTime =
-      row.server_time instanceof Date ? row.server_time : new Date(row.server_time)
 
     sendJson(response, 200, {
-      database: {
-        databaseName: row.database_name,
-        serverTime: serverTime.toISOString(),
-      },
+      clients: result.rows.map((client) => ({
+        id: client.id,
+        name: client.name,
+        email: client.email,
+        status: client.status,
+        createdAt:
+          client.created_at instanceof Date
+            ? client.created_at.toISOString()
+            : new Date(client.created_at).toISOString(),
+      })),
     })
   } catch (error) {
     sendJson(response, 500, {
-      error: error instanceof Error ? error.message : 'No se pudo consultar Postgres.',
+      error: error instanceof Error ? error.message : 'No se pudieron cargar clientes.',
     })
   }
 }
