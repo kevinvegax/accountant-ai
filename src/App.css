@@ -86,7 +86,7 @@ button:focus-visible {
 
 .result-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 18px;
 }
@@ -101,7 +101,6 @@ button:focus-visible {
 }
 
 .result-grid span,
-.section-header span,
 .endpoint span {
   display: block;
   color: var(--muted);
@@ -124,76 +123,6 @@ button:focus-visible {
 
 .error-message {
   color: #b91c1c;
-}
-
-.clients-section {
-  border-top: 1px solid var(--border);
-  padding-top: 18px;
-  margin-top: 18px;
-}
-
-.section-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 8px;
-}
-
-.section-header h2 {
-  margin: 0;
-}
-
-.client-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.client-list li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  min-height: 64px;
-  border-bottom: 1px solid var(--border);
-}
-
-.client-list li:last-child {
-  border-bottom: 0;
-}
-
-.client-list strong,
-.client-list span {
-  display: block;
-}
-
-.client-list strong {
-  color: var(--text-h);
-}
-
-.client-list div span {
-  color: var(--muted);
-  font-size: 14px;
-  overflow-wrap: anywhere;
-}
-
-.client-status {
-  flex: 0 0 auto;
-  border-radius: 999px;
-  padding: 4px 10px;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.client-status.active {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.client-status.inactive {
-  background: #fee2e2;
-  color: #991b1b;
 }
 
 .endpoint {
@@ -224,9 +153,4 @@ button:focus-visible {
     grid-template-columns: 1fr;
   }
 
-  .client-list li,
-  .section-header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
 }

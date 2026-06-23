@@ -2,11 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { getSql } from '../server/db'
 
 type ClientRow = {
-  id: number
-  name: string
-  email: string
-  status: 'active' | 'inactive'
-  created_at: Date | string
+  total_clients: string | number
 }
 
 const jsonHeaders = {
@@ -32,24 +28,15 @@ export default async function handler(
   }
 
   try {
-    const rows = (await getSql().query(`
-      select id, name, email, status, created_at
-      from public.clients
-      order by id asc
-      limit 20
+    const [summary] = (await getSql().query(`
+      select count(*) as total_clients
+      from app.clients
     `)) as ClientRow[]
 
     sendJson(response, 200, {
-      clients: rows.map((client) => ({
-        id: client.id,
-        name: client.name,
-        email: client.email,
-        status: client.status,
-        createdAt:
-          client.created_at instanceof Date
-            ? client.created_at.toISOString()
-            : new Date(client.created_at).toISOString(),
-      })),
+      ok: true,
+      table: 'app.clients',
+      totalClients: Number(summary.total_clients),
     })
   } catch (error) {
     console.error('GET /api/clients failed', error)
