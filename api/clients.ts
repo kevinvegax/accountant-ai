@@ -34,7 +34,7 @@ export default async function handler(
   try {
     const result = await getPool().query<ClientRow>(`
       select id, name, email, status, created_at
-      from clients
+      from public.clients
       order by id asc
       limit 20
     `)
@@ -52,6 +52,8 @@ export default async function handler(
       })),
     })
   } catch (error) {
+    console.error('GET /api/clients failed', error)
+
     sendJson(response, 500, {
       error: error instanceof Error ? error.message : 'No se pudieron cargar clientes.',
     })

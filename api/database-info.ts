@@ -45,6 +45,8 @@ export default async function handler(
       },
     })
   } catch (error) {
+    console.error('GET /api/database-info failed', error)
+
     sendJson(response, 500, {
       error: error instanceof Error ? error.message : 'No se pudo consultar Postgres.',
     })

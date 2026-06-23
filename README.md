@@ -30,7 +30,7 @@ Aplica la primera migración en tu base:
 psql "$DATABASE_URL" -f migrations/001_create_clients.sql
 ```
 
-La tabla inicial es `clients`, con datos seed para probar lectura desde el backend.
+La tabla inicial es `public.clients`, con datos seed para probar lectura desde el backend.
 
 ## API
 
@@ -51,7 +51,7 @@ select current_database() as database_name, now() as server_time;
 
 ```sql
 select id, name, email, status, created_at
-from clients
+from public.clients
 order by id asc
 limit 20;
 ```

@@ -1,4 +1,6 @@
-create table if not exists clients (
+create schema if not exists public;
+
+create table if not exists public.clients (
   id integer generated always as identity primary key,
   name text not null,
   email text not null unique,
@@ -15,14 +17,14 @@ begin
 end;
 $$ language plpgsql;
 
-drop trigger if exists clients_set_updated_at on clients;
+drop trigger if exists clients_set_updated_at on public.clients;
 
 create trigger clients_set_updated_at
-before update on clients
+before update on public.clients
 for each row
 execute function set_updated_at();
 
-insert into clients (name, email, status)
+insert into public.clients (name, email, status)
 values
   ('Ana Lopez', 'ana@example.com', 'active'),
   ('Carlos Rivera', 'carlos@example.com', 'active'),
