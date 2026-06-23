@@ -1,121 +1,129 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import { useCallback, useEffect, useState } from 'react'
 import './App.css'
 
+type DatabaseInfo = {
+  databaseName: string
+  serverTime: string
+}
+
+type DatabaseInfoResponse =
+  | { database: DatabaseInfo }
+  | { error: string }
+
+async function fetchDatabaseInfo() {
+  const response = await fetch('/api/database-info')
+  const data = (await response.json()) as DatabaseInfoResponse
+
+  if (!response.ok) {
+    throw new Error('error' in data ? data.error : 'No se pudo cargar Postgres.')
+  }
+
+  if ('database' in data) {
+    return data.database
+  }
+
+  throw new Error('La respuesta de Postgres no tiene datos.')
+}
+
+function getLoadErrorMessage(loadError: unknown) {
+  return loadError instanceof Error
+    ? loadError.message
+    : 'No se pudo cargar Postgres.'
+}
+
 function App() {
-  const [count, setCount] = useState(0)
+  const [databaseInfo, setDatabaseInfo] = useState<DatabaseInfo | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const loadDatabaseInfo = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      setDatabaseInfo(await fetchDatabaseInfo())
+    } catch (loadError) {
+      setDatabaseInfo(null)
+      setError(getLoadErrorMessage(loadError))
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    let shouldIgnore = false
+
+    async function loadInitialDatabaseInfo() {
+      try {
+        const nextDatabaseInfo = await fetchDatabaseInfo()
+
+        if (!shouldIgnore) {
+          setDatabaseInfo(nextDatabaseInfo)
+        }
+      } catch (loadError) {
+        if (!shouldIgnore) {
+          setDatabaseInfo(null)
+          setError(getLoadErrorMessage(loadError))
+        }
+      } finally {
+        if (!shouldIgnore) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    void loadInitialDatabaseInfo()
+
+    return () => {
+      shouldIgnore = true
+    }
+  }, [])
+
+  const formattedServerTime = databaseInfo
+    ? new Intl.DateTimeFormat('es-MX', {
+        dateStyle: 'medium',
+        timeStyle: 'medium',
+      }).format(new Date(databaseInfo.serverTime))
+    : '-'
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <main className="app-shell">
+      <section className="database-panel">
+        <div className="panel-header">
+          <div>
+            <p className="eyebrow">Vercel API + Postgres</p>
+            <h1>Datos desde Postgres</h1>
+          </div>
+          <button type="button" onClick={loadDatabaseInfo} disabled={isLoading}>
+            {isLoading ? 'Cargando' : 'Actualizar'}
+          </button>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+        <div className="connection-status">
+          <span className={error ? 'status-dot error' : 'status-dot'}></span>
+          <span>{error ? 'Sin conexión' : 'Consulta lista'}</span>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
+
+        <div className="result-grid">
+          <div>
+            <span>Base de datos</span>
+            <strong>{databaseInfo?.databaseName ?? '-'}</strong>
+          </div>
+          <div>
+            <span>Hora del servidor</span>
+            <strong>{formattedServerTime}</strong>
+          </div>
+        </div>
+
+        {isLoading && <p className="message">Consultando el endpoint...</p>}
+        {error && <p className="message error-message">{error}</p>}
+
+        <div className="endpoint">
+          <span>Endpoint</span>
+          <code>GET /api/database-info</code>
         </div>
       </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+    </main>
   )
 }
 
