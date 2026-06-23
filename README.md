@@ -9,6 +9,13 @@ npm install
 npm run dev
 ```
 
+`npm run dev` levanta el frontend con Vite. Para probar también las funciones
+`/api` en local, usa Vercel CLI:
+
+```bash
+vercel dev
+```
+
 ## Postgres
 
 Configura una variable de entorno con la cadena de conexión:

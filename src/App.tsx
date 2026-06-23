@@ -27,9 +27,25 @@ type DashboardData = {
   clients: Client[]
 }
 
+async function readApiJson<T>(response: Response, fallbackMessage: string): Promise<T> {
+  const responseText = await response.text()
+
+  try {
+    return JSON.parse(responseText) as T
+  } catch {
+    const preview = responseText.trim().slice(0, 140)
+    const details = preview ? ` Respuesta: ${preview}` : ''
+
+    throw new Error(`${fallbackMessage} Status ${response.status}.${details}`)
+  }
+}
+
 async function fetchDatabaseInfo() {
   const response = await fetch('/api/database-info')
-  const data = (await response.json()) as DatabaseInfoResponse
+  const data = await readApiJson<DatabaseInfoResponse>(
+    response,
+    'El endpoint /api/database-info no devolvio JSON.',
+  )
 
   if (!response.ok) {
     throw new Error('error' in data ? data.error : 'No se pudo cargar Postgres.')
@@ -44,7 +60,10 @@ async function fetchDatabaseInfo() {
 
 async function fetchClients() {
   const response = await fetch('/api/clients')
-  const data = (await response.json()) as ClientsResponse
+  const data = await readApiJson<ClientsResponse>(
+    response,
+    'El endpoint /api/clients no devolvio JSON.',
+  )
 
   if (!response.ok) {
     throw new Error('error' in data ? data.error : 'No se pudieron cargar clientes.')
