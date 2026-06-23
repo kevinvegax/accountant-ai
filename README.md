@@ -18,10 +18,10 @@ vercel dev
 
 ## Postgres
 
-Configura una variable de entorno con la cadena de conexión:
+Configura una variable de entorno con la cadena de conexión de Neon:
 
 ```bash
-DATABASE_URL=postgres://USER:PASSWORD@HOST:5432/DATABASE
+DATABASE_URL=postgresql://USER:PASSWORD@HOST.neon.tech/DATABASE?sslmode=require
 ```
 
 Aplica la primera migración en tu base:
@@ -58,4 +58,4 @@ limit 20;
 
 El frontend consume esos endpoints desde `src/App.tsx` y muestra la lista de clientes.
 
-En Vercel, agrega `DATABASE_URL` o `POSTGRES_URL` en Project Settings > Environment Variables.
+En Vercel, agrega `DATABASE_URL` o `POSTGRES_URL` en Project Settings > Environment Variables. Para Neon Serverless, el backend usa `@neondatabase/serverless` y ejecuta las consultas por HTTPS.

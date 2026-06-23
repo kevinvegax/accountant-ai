@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { getPool } from '../server/db'
+import { getSql } from '../server/db'
 
 type DatabaseInfoRow = {
   database_name: string
@@ -29,12 +29,12 @@ export default async function handler(
   }
 
   try {
-    const result = await getPool().query<DatabaseInfoRow>(`
+    const rows = (await getSql().query(`
       select
         current_database() as database_name,
         now() as server_time
-    `)
-    const row = result.rows[0]
+    `)) as DatabaseInfoRow[]
+    const row = rows[0]
     const serverTime =
       row.server_time instanceof Date ? row.server_time : new Date(row.server_time)
 

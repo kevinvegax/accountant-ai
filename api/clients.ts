@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { getPool } from '../server/db'
+import { getSql } from '../server/db'
 
 type ClientRow = {
   id: number
@@ -32,15 +32,15 @@ export default async function handler(
   }
 
   try {
-    const result = await getPool().query<ClientRow>(`
+    const rows = (await getSql().query(`
       select id, name, email, status, created_at
       from public.clients
       order by id asc
       limit 20
-    `)
+    `)) as ClientRow[]
 
     sendJson(response, 200, {
-      clients: result.rows.map((client) => ({
+      clients: rows.map((client) => ({
         id: client.id,
         name: client.name,
         email: client.email,
