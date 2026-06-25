@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { getSql } from '../server/db'
+import { neon } from '@neondatabase/serverless'
 
 type DatabaseInfoRow = {
   database_name: string
@@ -8,6 +8,16 @@ type DatabaseInfoRow = {
 
 const jsonHeaders = {
   'Content-Type': 'application/json; charset=utf-8',
+}
+
+function getSql() {
+  const connectionString = process.env.POSTGRES_URL ?? process.env.DATABASE_URL
+
+  if (!connectionString) {
+    throw new Error('Configura DATABASE_URL o POSTGRES_URL para conectar Postgres.')
+  }
+
+  return neon(connectionString)
 }
 
 function sendJson(response: ServerResponse, statusCode: number, body: unknown) {
