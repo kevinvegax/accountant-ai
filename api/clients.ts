@@ -2,7 +2,10 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { neon } from '@neondatabase/serverless'
 
 type ClientRow = {
-  total_clients: string | number
+  id: string | number
+  name: string
+  email: string
+  created_at: string | Date
 }
 
 const jsonHeaders = {
@@ -38,15 +41,22 @@ export default async function handler(
   }
 
   try {
-    const [summary] = (await getSql().query(`
-      select count(*) as total_clients
+    const clients = (await getSql().query(`
+      select id, name, email, created_at
       from app.clients
+      order by created_at desc, id desc
     `)) as ClientRow[]
 
     sendJson(response, 200, {
       ok: true,
       table: 'app.clients',
-      totalClients: Number(summary.total_clients),
+      totalClients: clients.length,
+      clients: clients.map((client) => ({
+        id: String(client.id),
+        name: client.name,
+        email: client.email,
+        createdAt: new Date(client.created_at).toISOString(),
+      })),
     })
   } catch (error) {
     console.error('GET /api/clients failed', error)

@@ -1,13 +1,20 @@
 import { useCallback, useEffect, useState } from 'react'
 import './App.css'
 
-type DatabaseInfo = {
-  databaseName: string
-  serverTime: string
+type Client = {
+  id: string
+  name: string
+  email: string
+  createdAt: string
 }
 
-type DatabaseInfoResponse =
-  | { database: DatabaseInfo }
+type ClientsResponse =
+  | {
+      ok: true
+      table: string
+      totalClients: number
+      clients: Client[]
+    }
   | { error: string }
 
 async function readApiJson<T>(response: Response, fallbackMessage: string): Promise<T> {
@@ -23,43 +30,50 @@ async function readApiJson<T>(response: Response, fallbackMessage: string): Prom
   }
 }
 
-async function fetchDatabaseInfo() {
-  const response = await fetch('/api/database-info')
-  const data = await readApiJson<DatabaseInfoResponse>(
+async function fetchClients() {
+  const response = await fetch('/api/clients')
+  const data = await readApiJson<ClientsResponse>(
     response,
-    'El endpoint /api/database-info no devolvio JSON.',
+    'El endpoint /api/clients no devolvio JSON.',
   )
 
   if (!response.ok) {
-    throw new Error('error' in data ? data.error : 'No se pudo cargar Postgres.')
+    throw new Error('error' in data ? data.error : 'No se pudieron cargar clientes.')
   }
 
-  if ('database' in data) {
-    return data.database
+  if ('clients' in data) {
+    return data.clients
   }
 
-  throw new Error('La respuesta de Postgres no tiene datos.')
+  throw new Error('La respuesta de clientes no tiene datos.')
 }
 
 function getLoadErrorMessage(loadError: unknown) {
   return loadError instanceof Error
     ? loadError.message
-    : 'No se pudo cargar Postgres.'
+    : 'No se pudieron cargar clientes.'
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat('es-MX', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value))
 }
 
 function App() {
-  const [databaseInfo, setDatabaseInfo] = useState<DatabaseInfo | null>(null)
+  const [clients, setClients] = useState<Client[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const loadDatabaseInfo = useCallback(async () => {
+  const loadClients = useCallback(async () => {
     setIsLoading(true)
     setError(null)
 
     try {
-      setDatabaseInfo(await fetchDatabaseInfo())
+      setClients(await fetchClients())
     } catch (loadError) {
-      setDatabaseInfo(null)
+      setClients([])
       setError(getLoadErrorMessage(loadError))
     } finally {
       setIsLoading(false)
@@ -69,16 +83,16 @@ function App() {
   useEffect(() => {
     let shouldIgnore = false
 
-    async function loadInitialDatabaseInfo() {
+    async function loadInitialClients() {
       try {
-        const nextDatabaseInfo = await fetchDatabaseInfo()
+        const nextClients = await fetchClients()
 
         if (!shouldIgnore) {
-          setDatabaseInfo(nextDatabaseInfo)
+          setClients(nextClients)
         }
       } catch (loadError) {
         if (!shouldIgnore) {
-          setDatabaseInfo(null)
+          setClients([])
           setError(getLoadErrorMessage(loadError))
         }
       } finally {
@@ -88,55 +102,76 @@ function App() {
       }
     }
 
-    void loadInitialDatabaseInfo()
+    void loadInitialClients()
 
     return () => {
       shouldIgnore = true
     }
   }, [])
 
-  const formattedServerTime = databaseInfo
-    ? new Intl.DateTimeFormat('es-MX', {
-        dateStyle: 'medium',
-        timeStyle: 'medium',
-      }).format(new Date(databaseInfo.serverTime))
-    : '-'
+  const clientCountLabel = `${clients.length} ${
+    clients.length === 1 ? 'cliente' : 'clientes'
+  }`
 
   return (
     <main className="app-shell">
-      <section className="database-panel">
+      <section className="clients-panel">
         <div className="panel-header">
           <div>
             <p className="eyebrow">Vercel API + Neon</p>
-            <h1>Backend conectado</h1>
+            <h1>Clientes</h1>
           </div>
-          <button type="button" onClick={loadDatabaseInfo} disabled={isLoading}>
+          <button type="button" onClick={loadClients} disabled={isLoading}>
             {isLoading ? 'Cargando' : 'Actualizar'}
           </button>
         </div>
 
         <div className="connection-status">
           <span className={error ? 'status-dot error' : 'status-dot'}></span>
-          <span>{error ? 'Sin conexión' : 'Consulta lista'}</span>
+          <span>{error ? 'Sin conexión' : 'Clientes cargados'}</span>
         </div>
 
         <div className="result-grid">
           <div>
-            <span>Base de datos</span>
-            <strong>{databaseInfo?.databaseName ?? '-'}</strong>
+            <span>Total</span>
+            <strong>{clientCountLabel}</strong>
           </div>
           <div>
-            <span>Hora del servidor</span>
-            <strong>{formattedServerTime}</strong>
+            <span>Origen</span>
+            <strong>app.clients</strong>
           </div>
         </div>
 
-        {isLoading && <p className="message">Consultando el backend...</p>}
+        {isLoading && <p className="message">Cargando clientes...</p>}
         {error && <p className="message error-message">{error}</p>}
+
+        {!isLoading && !error && clients.length === 0 && (
+          <div className="empty-state">
+            <strong>No hay clientes todavia</strong>
+            <span>Agrega registros en app.clients para verlos aqui.</span>
+          </div>
+        )}
+
+        {clients.length > 0 && (
+          <div className="clients-list" aria-label="Clientes">
+            <div className="clients-row clients-heading">
+              <span>Cliente</span>
+              <span>Email</span>
+              <span>Alta</span>
+            </div>
+
+            {clients.map((client) => (
+              <div className="clients-row" key={client.id}>
+                <strong>{client.name}</strong>
+                <a href={`mailto:${client.email}`}>{client.email}</a>
+                <time dateTime={client.createdAt}>{formatDate(client.createdAt)}</time>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="endpoint">
           <span>Endpoints</span>
-          <code>GET /api/database-info</code>
           <code>GET /api/clients</code>
         </div>
       </section>
